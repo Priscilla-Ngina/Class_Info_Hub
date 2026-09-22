@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_screen.dart';
 
 class WelcomeScreen extends StatelessWidget{
   const WelcomeScreen({super.key});
@@ -43,7 +44,14 @@ child: Column(
         style: ElevatedButton.styleFrom(
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context)=> const LoginScreen(),
+            ),
+          );
+        },
         child: const Text(
           'Get Started',
           style: TextStyle(
