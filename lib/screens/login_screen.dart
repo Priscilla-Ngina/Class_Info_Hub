@@ -1,7 +1,43 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
-class LoginScreen extends StatelessWidget {
+import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'home_screen.dart';
+
+
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  Future<void> login() async {
+    try {
+      await AuthService().login(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HomeScreen(),
+        ),
+      );
+
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid email or password.'),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +85,7 @@ class LoginScreen extends StatelessWidget {
             SizedBox(
               width: 300,
               child: TextField(
+                controller: emailController,
                 decoration: InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
@@ -60,6 +97,7 @@ class LoginScreen extends StatelessWidget {
             SizedBox(
               width: 300,
               child: TextField(
+                controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: 'Password',
@@ -73,7 +111,7 @@ class LoginScreen extends StatelessWidget {
               width: 300,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: login,
                 child: const Text(
                   'Log In',
                   style: TextStyle(
