@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "512962765292",
+    "project_id": "class-info-hub",
+    "storage_bucket": "class-info-hub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:512962765292:android:0d1780afcef461059760c9",
+        "android_client_info": {
+          "package_name": "com.priscillangina.class_info_hub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQXeEAHWuuU3qorOk1HOgQup6OmFATmUM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
