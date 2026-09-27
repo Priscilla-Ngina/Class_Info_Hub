@@ -20,6 +20,7 @@ class AnnouncementService {
       'content': content,
       'postedBy': user.uid,
       'postedAt': FieldValue.serverTimestamp(),
+      'isPinned': false,
     });
   }
 
@@ -30,5 +31,49 @@ class AnnouncementService {
         .collection('announcements')
         .orderBy('postedAt', descending: true)
         .get();
+  }
+
+  Future<void> updateAnnouncement({
+    required String classId,
+    required String announcementId,
+    required String title,
+    required String content,
+  }) async {
+    await firestore
+        .collection('classes')
+        .doc(classId)
+        .collection('announcements')
+        .doc(announcementId)
+        .update({
+      'title': title,
+      'content': content,
+    });
+  }
+
+  Future<void> deleteAnnouncement({
+    required String classId,
+    required String announcementId,
+  }) async {
+    await firestore
+        .collection('classes')
+        .doc(classId)
+        .collection('announcements')
+        .doc(announcementId)
+        .delete();
+  }
+
+  Future<void> setPinned({
+    required String classId,
+    required String announcementId,
+    required bool isPinned,
+  }) async {
+    await firestore
+        .collection('classes')
+        .doc(classId)
+        .collection('announcements')
+        .doc(announcementId)
+        .update({
+      'isPinned': isPinned,
+    });
   }
 }

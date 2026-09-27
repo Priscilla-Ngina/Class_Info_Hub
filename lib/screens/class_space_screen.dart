@@ -59,6 +59,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
     loadResources();
   }
 
+  // ============================================================
+  // ANNOUNCEMENTS
+  // ============================================================
+
   Future<void> loadAnnouncements() async {
     try {
       final results =
@@ -70,8 +74,26 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
         final data =
         document.data() as Map<String, dynamic>;
 
-        loadedAnnouncements.add(data);
+        loadedAnnouncements.add({
+          'id': document.id,
+          ...data,
+        });
       }
+
+      loadedAnnouncements.sort((a, b) {
+        final aPinned = a['isPinned'] == true;
+        final bPinned = b['isPinned'] == true;
+
+        if (aPinned && !bPinned) {
+          return -1;
+        }
+
+        if (!aPinned && bPinned) {
+          return 1;
+        }
+
+        return 0;
+      });
 
       if (mounted) {
         setState(() {
@@ -90,6 +112,199 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
     }
   }
 
+  Future<void> togglePin(
+      String announcementId,
+      bool currentlyPinned,
+      ) async {
+    try {
+      await announcementService.setPinned(
+        classId: widget.classId,
+        announcementId: announcementId,
+        isPinned: !currentlyPinned,
+      );
+
+      await loadAnnouncements();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            currentlyPinned
+                ? 'Announcement unpinned'
+                : 'Announcement pinned',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update announcement: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> deleteAnnouncement(
+      String announcementId,
+      ) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete announcement'),
+          content: const Text(
+            'Are you sure you want to delete this announcement?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    try {
+      await announcementService.deleteAnnouncement(
+        classId: widget.classId,
+        announcementId: announcementId,
+      );
+
+      await loadAnnouncements();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Announcement deleted'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to delete announcement: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> editAnnouncement(
+      Map<String, dynamic> announcement,
+      ) async {
+    final titleController = TextEditingController(
+      text: announcement['title'],
+    );
+
+    final contentController = TextEditingController(
+      text: announcement['content'],
+    );
+
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit announcement'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: contentController,
+                  maxLines: 5,
+                  decoration: const InputDecoration(
+                    labelText: 'Announcement',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final title = titleController.text.trim();
+                final content = contentController.text.trim();
+
+                if (title.isEmpty || content.isEmpty) {
+                  return;
+                }
+
+                try {
+                  await announcementService.updateAnnouncement(
+                    classId: widget.classId,
+                    announcementId: announcement['id'],
+                    title: title,
+                    content: content,
+                  );
+
+                  if (!dialogContext.mounted) return;
+
+                  Navigator.of(dialogContext).pop(true);
+                } catch (e) {
+                  print('Error editing announcement: $e');
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSave == true && mounted) {
+      final newTitle = titleController.text.trim();
+      final newContent = contentController.text.trim();
+
+      setState(() {
+        announcement['title'] = newTitle;
+        announcement['content'] = newContent;
+      });
+    }
+
+    titleController.dispose();
+    contentController.dispose();
+  }
+
+  // ============================================================
+  // TIMETABLE
+  // ============================================================
+
   Future<void> loadTimetable() async {
     try {
       final results =
@@ -101,7 +316,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
         final data =
         document.data() as Map<String, dynamic>;
 
-        loadedTimetable.add(data);
+        loadedTimetable.add({
+          'id': document.id,
+          ...data,
+        });
       }
 
       if (mounted) {
@@ -121,6 +339,188 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
     }
   }
 
+  Future<void> editTimetableEntry(
+      Map<String, dynamic> entry,
+      ) async {
+    final dayController = TextEditingController(
+      text: entry['day'],
+    );
+
+    final unitController = TextEditingController(
+      text: entry['unit'],
+    );
+
+    final timeController = TextEditingController(
+      text: entry['time'],
+    );
+
+    final roomController = TextEditingController(
+      text: entry['room'],
+    );
+
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit timetable entry'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: dayController,
+                  decoration: const InputDecoration(
+                    labelText: 'Day',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: unitController,
+                  decoration: const InputDecoration(
+                    labelText: 'Unit',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: timeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Time',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: roomController,
+                  decoration: const InputDecoration(
+                    labelText: 'Room',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final day = dayController.text.trim();
+                final unit = unitController.text.trim();
+                final time = timeController.text.trim();
+                final room = roomController.text.trim();
+
+                if (day.isEmpty ||
+                    unit.isEmpty ||
+                    time.isEmpty ||
+                    room.isEmpty) {
+                  return;
+                }
+
+                try {
+                  await timetableService.updateTimetableEntry(
+                    classId: widget.classId,
+                    timetableId: entry['id'],
+                    day: day,
+                    unit: unit,
+                    time: time,
+                    room: room,
+                  );
+
+                  if (!dialogContext.mounted) return;
+
+                  Navigator.of(dialogContext).pop(true);
+                } catch (e) {
+                  print('Error editing timetable: $e');
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSave == true && mounted) {
+      await loadTimetable();
+    }
+
+    dayController.dispose();
+    unitController.dispose();
+    timeController.dispose();
+    roomController.dispose();
+  }
+
+  Future<void> deleteTimetableEntry(
+      String timetableId,
+      ) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete timetable entry'),
+          content: const Text(
+            'Are you sure you want to delete this timetable entry?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    try {
+      await timetableService.deleteTimetableEntry(
+        classId: widget.classId,
+        timetableId: timetableId,
+      );
+
+      await loadTimetable();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Timetable entry deleted'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to delete timetable entry: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // RESOURCES
+  // ============================================================
+
   Future<void> loadResources() async {
     try {
       final results =
@@ -132,7 +532,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
         final data =
         document.data() as Map<String, dynamic>;
 
-        loadedResources.add(data);
+        loadedResources.add({
+          'id': document.id,
+          ...data,
+        });
       }
 
       if (mounted) {
@@ -151,6 +554,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
       }
     }
   }
+
+  // ============================================================
+  // GENERAL HELPERS
+  // ============================================================
 
   String formatDateTime(dynamic timestamp) {
     if (timestamp == null) {
@@ -183,6 +590,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
     tabController.dispose();
     super.dispose();
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -220,6 +631,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
       ),
     );
   }
+
+  // ============================================================
+  // ANNOUNCEMENTS SECTION
+  // ============================================================
 
   Widget buildAnnouncementsSection() {
     return Padding(
@@ -278,15 +693,13 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
           Expanded(
             child: isLoadingAnnouncements
                 ? const Center(
-              child:
-              CircularProgressIndicator(),
+              child: CircularProgressIndicator(),
             )
                 : announcements.isEmpty
                 ? const Center(
               child: Text(
                 'No announcements yet.',
-                textAlign:
-                TextAlign.center,
+                textAlign: TextAlign.center,
               ),
             )
                 : ListView.builder(
@@ -296,6 +709,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                   (context, index) {
                 final announcement =
                 announcements[index];
+
+                final isPinned =
+                    announcement['isPinned'] ==
+                        true;
 
                 return Card(
                   margin:
@@ -312,17 +729,141 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                       CrossAxisAlignment
                           .start,
                       children: [
-                        Text(
-                          announcement['title'],
-                          style:
-                          const TextStyle(
-                            fontSize: 18,
-                            fontWeight:
-                            FontWeight.bold,
-                          ),
+                        Row(
+                          crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                announcement[
+                                'title'],
+                                style:
+                                const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight:
+                                  FontWeight
+                                      .bold,
+                                ),
+                              ),
+                            ),
+                            if (isPinned)
+                              const Padding(
+                                padding:
+                                EdgeInsets
+                                    .only(
+                                  left: 8,
+                                ),
+                                child: Icon(
+                                  Icons.push_pin,
+                                  size: 20,
+                                ),
+                              ),
+                            if (widget.isManager)
+                              PopupMenuButton<
+                                  String>(
+                                onSelected:
+                                    (value) {
+                                  if (value ==
+                                      'pin') {
+                                    togglePin(
+                                      announcement[
+                                      'id'],
+                                      isPinned,
+                                    );
+                                  }
+
+                                  if (value ==
+                                      'edit') {
+                                    editAnnouncement(
+                                      announcement,
+                                    );
+                                  }
+
+                                  if (value ==
+                                      'delete') {
+                                    deleteAnnouncement(
+                                      announcement[
+                                      'id'],
+                                    );
+                                  }
+                                },
+                                itemBuilder:
+                                    (context) {
+                                  return [
+                                    PopupMenuItem(
+                                      value:
+                                      'pin',
+                                      child:
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            isPinned
+                                                ? Icons
+                                                .push_pin_outlined
+                                                : Icons
+                                                .push_pin,
+                                          ),
+                                          const SizedBox(
+                                            width:
+                                            8,
+                                          ),
+                                          Text(
+                                            isPinned
+                                                ? 'Unpin'
+                                                : 'Pin',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value:
+                                      'edit',
+                                      child:
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons
+                                                .edit,
+                                          ),
+                                          SizedBox(
+                                            width:
+                                            8,
+                                          ),
+                                          Text(
+                                            'Edit',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value:
+                                      'delete',
+                                      child:
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons
+                                                .delete,
+                                          ),
+                                          SizedBox(
+                                            width:
+                                            8,
+                                          ),
+                                          Text(
+                                            'Delete',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ];
+                                },
+                              ),
+                          ],
                         ),
                         const SizedBox(
-                            height: 8),
+                          height: 8,
+                        ),
                         Text(
                           announcement[
                           'content'],
@@ -332,15 +873,34 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                           ),
                         ),
                         const SizedBox(
-                            height: 8),
+                          height: 8,
+                        ),
                         Text(
                           'Posted: ${formatDateTime(announcement['postedAt'])}',
                           style: TextStyle(
                             fontSize: 12,
                             color:
-                            Colors.grey[600],
+                            Colors.grey[
+                            600],
                           ),
                         ),
+                        if (isPinned)
+                          const Padding(
+                            padding:
+                            EdgeInsets.only(
+                              top: 8,
+                            ),
+                            child: Text(
+                              'Pinned announcement',
+                              style:
+                              TextStyle(
+                                fontSize: 12,
+                                fontWeight:
+                                FontWeight
+                                    .bold,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -352,6 +912,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
       ),
     );
   }
+
+  // ============================================================
+  // TIMETABLE SECTION
+  // ============================================================
 
   Widget buildTimetableSection() {
     return Padding(
@@ -452,6 +1016,40 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                       '${entry['day']} • ${entry['time']}\n'
                           'Room: ${entry['room']}',
                     ),
+                    trailing: widget.isManager
+                        ? Row(
+                      mainAxisSize:
+                      MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon:
+                          const Icon(
+                            Icons.edit,
+                          ),
+                          tooltip:
+                          'Edit timetable entry',
+                          onPressed: () {
+                            editTimetableEntry(
+                              entry,
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon:
+                          const Icon(
+                            Icons.delete,
+                          ),
+                          tooltip:
+                          'Delete timetable entry',
+                          onPressed: () {
+                            deleteTimetableEntry(
+                              entry['id'],
+                            );
+                          },
+                        ),
+                      ],
+                    )
+                        : null,
                   ),
                 );
               },
@@ -461,6 +1059,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
       ),
     );
   }
+
+  // ============================================================
+  // RESOURCES SECTION
+  // ============================================================
 
   Widget buildResourcesSection() {
     return Padding(
@@ -531,7 +1133,8 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
               ),
             )
                 : ListView.builder(
-              itemCount: resources.length,
+              itemCount:
+              resources.length,
               itemBuilder:
                   (context, index) {
                 final resource =
@@ -551,7 +1154,8 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                       resource['fileName'],
                       maxLines: 2,
                       overflow:
-                      TextOverflow.ellipsis,
+                      TextOverflow
+                          .ellipsis,
                     ),
                     subtitle: Text(
                       'Uploaded: ${formatDateTime(resource['uploadedAt'])}',

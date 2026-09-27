@@ -29,4 +29,37 @@ class TimetableService {
         .collection('timetable')
         .get();
   }
+
+  Future<void> updateTimetableEntry({
+    required String classId,
+    required String timetableId,
+    required String day,
+    required String unit,
+    required String time,
+    required String room,
+  }) async {
+    await firestore
+        .collection('classes')
+        .doc(classId)
+        .collection('timetable')
+        .doc(timetableId)
+        .update({
+      'day': day,
+      'unit': unit,
+      'time': time,
+      'room': room,
+    });
+  }
+
+  Future<void> deleteTimetableEntry({
+    required String classId,
+    required String timetableId,
+  }) async {
+    await firestore
+        .collection('classes')
+        .doc(classId)
+        .collection('timetable')
+        .doc(timetableId)
+        .delete();
+  }
 }
