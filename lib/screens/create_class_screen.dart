@@ -110,16 +110,48 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      final classCode = generateClassCode(
-                        programmeController.text,
-                        yearController.text,
-                      );
+                    if (!formKey.currentState!.validate()) {
+                      return;
+                    }
+
+                    print('CREATE CLASS BUTTON PRESSED');
+
+                    final classCode = generateClassCode(
+                      programmeController.text,
+                      yearController.text,
+                    );
+
+                    try {
+                      print('Creating class with code: $classCode');
 
                       await ClassService().createClass(
                         programme: programmeController.text.trim(),
                         year: yearController.text.trim(),
                         classCode: classCode,
+                      );
+
+                      print('CLASS CREATED SUCCESSFULLY');
+
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Class created successfully. Code: $classCode',
+                          ),
+                        ),
+                      );
+
+                      Navigator.pop(context);
+                    } catch (e) {
+                      print('ERROR CREATING CLASS: $e');
+
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to create class: $e'),
+                        ),
                       );
                     }
                   },
