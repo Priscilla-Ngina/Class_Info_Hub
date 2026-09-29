@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
             'classId': classId,
             'programme': data['programme'],
             'year': data['year'],
+            'classCode': data['classCode'],
             'isManager': isManager,
           });
         }
@@ -75,7 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Colors.deepPurple[300],
+        foregroundColor: Colors.white,
         title: const Text('Class Info Hub'),
       ),
       body: Padding(
@@ -88,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
               ),
             ),
 
@@ -121,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final classData = myClasses[index];
 
                   return Card(
+                    color: Colors.deepPurple.shade50,
                     child: ListTile(
                       title: Text(
                         classData['programme'],
@@ -134,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       trailing: const Icon(
                         Icons.arrow_forward_ios,
                         size: 18,
+                        color: Colors.deepPurple,
                       ),
                       onTap: () {
                         Navigator.push(
@@ -144,6 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   classId: classData['classId'],
                                   programme: classData['programme'],
                                   year: classData['year'],
+                                  classCode: classData['classCode'],
                                   isManager: classData['isManager'],                                ),
                           ),
                         );
@@ -160,6 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple[300],
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -185,7 +195,13 @@ class _HomeScreenState extends State<HomeScreen> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.deepPurple,
+                  side: const BorderSide(
+                    color: Colors.deepPurple,
+                  ),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,

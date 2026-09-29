@@ -87,6 +87,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                         classId: classId,
                         programme: classData['programme'],
                         year: classData['year'],
+                        classCode: classData['classCode'],
 
                       ),
                     ),

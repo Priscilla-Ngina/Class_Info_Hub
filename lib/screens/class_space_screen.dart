@@ -7,18 +7,21 @@ import 'add_timetable_screen.dart';
 import 'upload_resource_screen.dart';
 import 'edit_announcement_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 
 class ClassSpaceScreen extends StatefulWidget {
   final String classId;
   final String programme;
   final String year;
   final bool isManager;
+  final String classCode;
 
   const ClassSpaceScreen({
     super.key,
     required this.classId,
     required this.programme,
     required this.year,
+    required this.classCode,
     this.isManager = false,
   });
 
@@ -612,8 +615,8 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor:
-        Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Colors.deepPurple[300],
+        foregroundColor: Colors.white,
         title: const Text('Class Space'),
         bottom: TabBar(
           controller: tabController,
@@ -656,20 +659,73 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
         crossAxisAlignment:
         CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.programme,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.programme,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Year ${widget.year}',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.deepPurple.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Class Code: ${widget.classCode}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (widget.isManager)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.copy,
+                          color: Colors.deepPurple,
+                        ),
+                        tooltip: 'Copy class code',
+                        onPressed: () {
+                          Clipboard.setData(
+                            ClipboardData(text: widget.classCode),
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Class code copied'),
+                            ),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Year ${widget.year}',
-            style: const TextStyle(
-              fontSize: 18,
-            ),
-          ),
+
+          const SizedBox(height: 8),
+
+
+
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment:
@@ -680,11 +736,15 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple,
                 ),
               ),
               if (widget.isManager)
                 IconButton(
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(
+                    Icons.add,
+                    color: Colors.deepPurple,
+                  ),
                   tooltip: 'New announcement',
                   onPressed: () {
                     Navigator.push(
@@ -726,10 +786,10 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                 final isPinned =
                     announcement['isPinned'] ==
                         true;
-
                 return Card(
-                  margin:
-                  const EdgeInsets.only(
+                  color: Colors.white,
+                  elevation: 2,
+                  margin: const EdgeInsets.only(
                     bottom: 12,
                   ),
                   child: Padding(
@@ -961,6 +1021,7 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple,
                 ),
               ),
               if (widget.isManager)
@@ -1008,10 +1069,9 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                 timetableEntries[index];
 
                 return Card(
-                  margin:
-                  const EdgeInsets.only(
-                    bottom: 12,
-                  ),
+                  color: Colors.white,
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading:
                     const Icon(
@@ -1108,6 +1168,7 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple,
                 ),
               ),
               if (widget.isManager)
@@ -1152,10 +1213,11 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                   (context, index) {
                 final resource =
                 resources[index];
+
                 return Card(
-                  margin: const EdgeInsets.only(
-                    bottom: 12,
-                  ),
+                  color: Colors.white,
+                  elevation: 2,
+                  margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: const Icon(
                       Icons.picture_as_pdf,

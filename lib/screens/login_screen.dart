@@ -15,10 +15,15 @@ State<LoginScreen> createState() => _LoginScreenState();
 class _LoginScreenState extends State<LoginScreen> {
 final emailController = TextEditingController();
 final passwordController = TextEditingController();
+final formKey = GlobalKey<FormState>();
 
 Future<void> login() async {
-try {
-await AuthService().login(
+  if (!formKey.currentState!.validate()) {
+    return;
+  }
+
+  try {
+    await AuthService().login(
 email: emailController.text.trim(),
 password: passwordController.text,
 );
@@ -49,7 +54,9 @@ title: const Text('Class Info Hub'),
 body: SingleChildScrollView(
 child: Padding(
 padding: const EdgeInsets.symmetric(vertical: 24),
-child: Column(
+  child: Form(
+    key: formKey,
+    child: Column(
 mainAxisAlignment: MainAxisAlignment.center,
 children: [
 const Text(
@@ -84,24 +91,38 @@ fontSize: 16,
 const SizedBox(height: 24),
 SizedBox(
 width: 300,
-child: TextField(
-controller: emailController,
-decoration: const InputDecoration(
-labelText: 'Email',
-border: OutlineInputBorder(),
-),
+child: TextFormField(
+  controller: emailController,
+  decoration: const InputDecoration(
+    labelText: 'Email',
+    border: OutlineInputBorder(),
+  ),
+  validator: (value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your email';
+    }
+
+    return null;
+  },
 ),
 ),
 const SizedBox(height: 16),
 SizedBox(
 width: 300,
-child: TextField(
-controller: passwordController,
-obscureText: true,
-decoration: const InputDecoration(
-labelText: 'Password',
-border: OutlineInputBorder(),
-),
+child:TextFormField(
+  controller: passwordController,
+  obscureText: true,
+  decoration: const InputDecoration(
+    labelText: 'Password',
+    border: OutlineInputBorder(),
+  ),
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+
+    return null;
+  },
 ),
 ),
 const SizedBox(height: 24),
@@ -139,6 +160,7 @@ child: const Text('Create one'),
 ],
 ),
 ],
+),
 ),
 ),
 ),

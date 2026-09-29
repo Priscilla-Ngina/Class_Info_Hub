@@ -28,7 +28,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Class Info Hub',
       theme: ThemeData(
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.light,
+        ),
       ),
       home: const WelcomeScreen(),
     );

@@ -74,4 +74,17 @@ class ClassService {
     return data['createdBy'] == user.uid;
   }
 
+  Future<String?> getClassCode(String classId) async {
+    final classDocument =
+    await firestore.collection('classes').doc(classId).get();
+
+    if (!classDocument.exists) {
+      return null;
+    }
+
+    final data = classDocument.data()!;
+
+    return data['classCode'];
+  }
+
 }

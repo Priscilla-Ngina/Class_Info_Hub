@@ -20,22 +20,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final confirmPasswordController = TextEditingController();
 
   Future<void> createAccount() async {
-
-    if(!formKey.currentState!.validate()){
+    if (!formKey.currentState!.validate()) {
       return;
     }
 
-    if(passwordController.text != confirmPasswordController.text){
-         print('Passwords do not match');
+    if (passwordController.text != confirmPasswordController.text) {
       return;
     }
 
-    await authService.createAccount(
-      email: emailController.text.trim(),
-      password: passwordController.text,
-      fullName: fullNameController.text.trim(),
-      registrationNumber: registrationNumberController.text.trim(),
-    );
+    try {
+      await authService.createAccount(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+        fullName: fullNameController.text.trim(),
+        registrationNumber: registrationNumberController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      String message;
+
+      if (e.code == 'email-already-in-use') {
+        message = 'An account with this email already exists.';
+      } else if (e.code == 'invalid-email') {
+        message = 'Please enter a valid email address.';
+      } else if (e.code == 'weak-password') {
+        message = 'The password is too weak.';
+      } else {
+        message = 'Unable to create account. Please try again.';
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Something went wrong. Please try again.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -45,10 +77,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Class Info Hub'),
       ),
-      body: Center(
-        child: Form(
-          key: formKey,
-        child: Column(
+        body: SingleChildScrollView(
+          child: Center(
+            child: Form(
+              key: formKey,
+              child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
 
@@ -208,6 +241,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         ),
       ),
+        ),
     );
   }
 }
