@@ -46,3 +46,5 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+class-info-hub-firebase-adminsdk-fbsvc-cf4de9a3b5.json

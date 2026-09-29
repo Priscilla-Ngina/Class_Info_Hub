@@ -5,6 +5,8 @@ import '../services/resource_service.dart';
 import 'create_announcement_screen.dart';
 import 'add_timetable_screen.dart';
 import 'upload_resource_screen.dart';
+import 'edit_announcement_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ClassSpaceScreen extends StatefulWidget {
   final String classId;
@@ -209,96 +211,32 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
       );
     }
   }
-
   Future<void> editAnnouncement(
       Map<String, dynamic> announcement,
       ) async {
-    final titleController = TextEditingController(
-      text: announcement['title'],
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditAnnouncementScreen(
+          classId: widget.classId,
+          announcementId: announcement['id'],
+          title: announcement['title'],
+          content: announcement['content'],
+        ),
+      ),
     );
 
-    final contentController = TextEditingController(
-      text: announcement['content'],
-    );
+    if (result == true) {
+      await loadAnnouncements();
 
-    final shouldSave = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Edit announcement'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Title',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: contentController,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Announcement',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final title = titleController.text.trim();
-                final content = contentController.text.trim();
+      if (!mounted) return;
 
-                if (title.isEmpty || content.isEmpty) {
-                  return;
-                }
-
-                try {
-                  await announcementService.updateAnnouncement(
-                    classId: widget.classId,
-                    announcementId: announcement['id'],
-                    title: title,
-                    content: content,
-                  );
-
-                  if (!dialogContext.mounted) return;
-
-                  Navigator.of(dialogContext).pop(true);
-                } catch (e) {
-                  print('Error editing announcement: $e');
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (shouldSave == true && mounted) {
-      final newTitle = titleController.text.trim();
-      final newContent = contentController.text.trim();
-
-      setState(() {
-        announcement['title'] = newTitle;
-        announcement['content'] = newContent;
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Announcement updated'),
+        ),
+      );
     }
-
-    titleController.dispose();
-    contentController.dispose();
   }
 
   // ============================================================
@@ -336,6 +274,23 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
           isLoadingTimetable = false;
         });
       }
+    }
+  }
+
+  Future<void> openResource(String fileUrl) async {
+    final uri = Uri.parse(fileUrl);
+
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open this resource.'),
+        ),
+      );
     }
   }
 
@@ -552,6 +507,64 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
           isLoadingResources = false;
         });
       }
+    }
+  }
+
+  Future<void> deleteResource(Map<String, dynamic> resource) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Resource?'),
+          content: Text(
+            'Are you sure you want to delete "${resource['fileName']}"?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    try {
+      await resourceService.deleteResource(
+        classId: widget.classId,
+        resourceId: resource['id'],
+        storagePath: resource['storagePath'],
+      );
+
+      await loadResources();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Resource deleted'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete resource: $e'),
+        ),
+      );
     }
   }
 
@@ -1139,27 +1152,47 @@ class _ClassSpaceScreenState extends State<ClassSpaceScreen>
                   (context, index) {
                 final resource =
                 resources[index];
-
                 return Card(
-                  margin:
-                  const EdgeInsets.only(
+                  margin: const EdgeInsets.only(
                     bottom: 12,
                   ),
                   child: ListTile(
-                    leading:
-                    const Icon(
+                    leading: const Icon(
                       Icons.picture_as_pdf,
                     ),
                     title: Text(
                       resource['fileName'],
                       maxLines: 2,
-                      overflow:
-                      TextOverflow
-                          .ellipsis,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
                       'Uploaded: ${formatDateTime(resource['uploadedAt'])}',
                     ),
+
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.download),
+                          tooltip: 'Download resource',
+                          onPressed: () {
+                            openResource(resource['fileUrl']);
+                          },
+                        ),
+
+                        if (widget.isManager)
+                          IconButton(
+                            icon: const Icon(Icons.delete),
+                            tooltip: 'Delete resource',
+                            onPressed: () {
+                              deleteResource(resource);
+                            },
+                          ),
+                      ],
+                    ),
+                    onTap: () {
+                      openResource(resource['fileUrl']);
+                    },
                   ),
                 );
               },

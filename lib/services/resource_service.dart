@@ -2,11 +2,12 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ResourceService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  final FirebaseStorage storage = FirebaseStorage.instance;
+
+  final SupabaseClient supabase = Supabase.instance.client;
 
   Future<void> uploadResource({
     required String classId,
@@ -15,16 +16,22 @@ class ResourceService {
   }) async {
     final user = FirebaseAuth.instance.currentUser!;
 
-    final storageReference = storage
-        .ref()
-        .child('classes')
-        .child(classId)
-        .child('resources')
-        .child(fileName);
+    final filePath =
+        'classes/$classId/resources/$fileName';
 
-    await storageReference.putData(fileBytes);
+    await supabase.storage
+        .from('class-resources')
+        .uploadBinary(
+      filePath,
+      fileBytes,
+      fileOptions: const FileOptions(
+        upsert: false,
+      ),
+    );
 
-    final downloadUrl = await storageReference.getDownloadURL();
+    final downloadUrl = supabase.storage
+        .from('class-resources')
+        .getPublicUrl(filePath);
 
     await firestore
         .collection('classes')
@@ -33,6 +40,7 @@ class ResourceService {
         .add({
       'fileName': fileName,
       'fileUrl': downloadUrl,
+      'storagePath': filePath,
       'uploadedBy': user.uid,
       'uploadedAt': FieldValue.serverTimestamp(),
     });
@@ -45,5 +53,26 @@ class ResourceService {
         .collection('resources')
         .orderBy('uploadedAt', descending: true)
         .get();
+  }
+
+  Future<void> deleteResource({
+    required String classId,
+    required String resourceId,
+    required String storagePath,
+  }) async {
+    // Delete the actual file from Supabase Storage.
+    await supabase.storage
+        .from('class-resources')
+        .remove([
+      storagePath,
+    ]);
+
+    // Delete the resource record from Firestore.
+    await firestore
+        .collection('classes')
+        .doc(classId)
+        .collection('resources')
+        .doc(resourceId)
+        .delete();
   }
 }
